@@ -1,0 +1,8 @@
+version: '3.8'  # You can adjust the version as needed
+
+services:
+  vtt-parser:
+    build: .      # Build from the current directory (where the Dockerfile is)
+    volumes:
+      - .:/app  # Mount the current directory to /vtt-files in the container
+    command: ["python", "/app/vtt_parser.py"] # Override the CMD in the Dockerfile
