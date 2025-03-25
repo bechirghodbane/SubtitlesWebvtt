@@ -18,7 +18,7 @@ def parse_vtt_file_to_words(file_path):
         ]
     """
 
-    words = {}
+    words = []
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             vtt_content = f.read()
@@ -31,7 +31,7 @@ def parse_vtt_file_to_words(file_path):
     for line in lines:
         # Extract words with timestamps using regex
         matches = re.findall(r'<c>([^<]+)</c>', line)
-        timestamp_matches = re.findall(r'({2}:{2}:{2}\.{3})', line)
+        timestamp_matches = re.findall(r'(\d{2}:\d{2}:\d{2}\.\d{3})', line)  # Corrected regex
         
         if matches and timestamp_matches:
             for i, match in enumerate(matches):
