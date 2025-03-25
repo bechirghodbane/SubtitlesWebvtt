@@ -91,36 +91,37 @@ def parse_vtt_file_to_words(file_path):
         return
 
     lines = vtt_content.strip().split('\n')
-    
+    slected_line_timestamp = None
     for line in lines:
-        slected_line_timestamp = None
+        
         line_timestamps = filter_line_timestamps(parse_vtt_timestamp_line(line))
         if line_timestamps is not None:
             slected_line_timestamp = line_timestamps
 
-        
-        parts = re.split(r'(<c>)?([^<]+)(</c>)?(?:<0*(\d{2}:\d{2}:\d{2}\.\d{3})>)?', line)
-        
-        current_timestamp = None
-        word = ""
+        if '<c>' in line :
+            parts = re.split(r'(<c>)?([^<]+)(</c>)?(?:<0*(\d{2}:\d{2}:\d{2}\.\d{3})>)?', line)
+            
+            start_timestamp = slected_line_timestamp['start_time']
+            word = ""
 
-        for part in parts:
-            if not part:
-                continue  # Skip empty strings
+            for part in parts:
+                print(f'part : {part}')
+                if not part:
+                    continue  # Skip empty strings
 
-            if re.match(r'\d{2}:\d{2}:\d{2}\.\d{3}', part):
-                if word:
-                    results.append((word, current_timestamp))
-                current_timestamp = part
-                word = ""
-            elif part != '<c>' and part != '</c>':
-                word += part
-        #if word:
-        #    results.append((word, current_timestamp))
+                if re.match(r'\d{2}:\d{2}:\d{2}\.\d{3}', part):
+                    if word:
+                        results.append((word, start_timestamp, part))
+                    start_timestamp = part
+                    word = ""
+                elif part != '<c>' and part != '</c>':
+                    word += part
+            if word:
+                results.append((word, start_timestamp, slected_line_timestamp['end_time']))
     return results
 
 # Example Usage (replace 'your_file.vtt' with the actual path to your file):
-file_path = '/app/input.ar.vtt'  #  <--- REPLACE THIS WITH YOUR FILE PATH
+file_path = './input.ar.vtt'  #  <--- REPLACE THIS WITH YOUR FILE PATH
 word_list = parse_vtt_file_to_words(file_path)
 
 for item in word_list:
