@@ -1,44 +1,25 @@
 import re
+import streamlit as st
 
 def time_to_seconds(time_str):
-        """Converts a time string (HH:MM:SS.mmm) to seconds."""
-        milliseconds = float(time_str.split('.')[1])
-        time_str = time_str.split('.')[0]
-        hours, minutes, seconds = map(float, time_str.split(':'))
-        return hours * 3600 * 1000 + minutes * 60 *1000 + seconds * 1000 + milliseconds
+    """Converts a time string (HH:MM:SS.mmm) to seconds."""
+    milliseconds = float(time_str.split('.')[1])
+    time_str = time_str.split('.')[0]
+    hours, minutes, seconds = map(float, time_str.split(':'))
+    return hours * 3600 * 1000 + minutes * 60 * 1000 + seconds * 1000 + milliseconds
 
 def filter_line_timestamps(parsed_line):
-    print(f'parsed_line :{parsed_line}')
     if parsed_line is None:
         return None
     start_time = time_to_seconds(parsed_line['start_time'])
     end_time = time_to_seconds(parsed_line['end_time'])
     diff = end_time - start_time
     if diff > 20:
-        print(f'timestamp not filtred : {diff}')
         return parsed_line
     else:
-        print(f'timestamp filtred : {diff}')
         return None
 
 def parse_vtt_timestamp_line(line):
-    """
-    Parses a VTT timestamp line to extract start time, end time, and attributes.
-
-    Args:
-        line: A string representing a VTT timestamp line.
-
-    Returns:
-        A dictionary containing the extracted information.
-        For example:
-        {
-            'start_time': '00:00:00.040',
-            'end_time': '00:00:02.230',
-            'align': 'start',
-            'position': '100%'
-        }
-    """
-
     pattern = re.compile(
         r"(\d{2}:\d{2}:\d{2}\.\d{3}) --> (\d{2}:\d{2}:\d{2}\.\d{3})"
         r"(.*)"  # Capture any remaining attributes
@@ -57,55 +38,32 @@ def parse_vtt_timestamp_line(line):
                 result[key] = value
         return result
     else:
-        return None  # Or raise an exception, depending on your error handling
+        return None
 
-
-def parse_vtt_file_to_words(file_path):
+def parse_vtt_file_to_words(file_content):
     """
     Parses a VTT file to extract word-by-word subtitles.
 
     Args:
-        file_path: The path to the VTT file.
+        file_content: The content of the VTT file as a string.
 
     Returns:
         A list of tuples, where each tuple contains a word and its corresponding timestamp.
-        For example:
-        [
-            ('هو', '00:00:00.160'),
-            ('ما', '00:00:00.280'),
-            ('فاتك', '00:00:00.599'),
-            ('حتى', '00:00:00.799'),
-            ('شيء', '00:00:01.040'),
-            ('بالعكس', '00:00:01.520'),
-            ('العشر', '00:00:01.880'),
-            ('لالي', None)  # Handle the last word without a timestamp
-        ]
     """
-
     results = []
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            vtt_content = f.read()
-    except FileNotFoundError:
-        print(f"Error: File not found at {file_path}")
-        return
-
-    lines = vtt_content.strip().split('\n')
+    lines = file_content.strip().split('\n')
     slected_line_timestamp = None
     for line in lines:
-        
         line_timestamps = filter_line_timestamps(parse_vtt_timestamp_line(line))
         if line_timestamps is not None:
             slected_line_timestamp = line_timestamps
 
-        if '<c>' in line :
+        if '<c>' in line:
             parts = re.split(r'(<c>)?([^<]+)(</c>)?(?:<0*(\d{2}:\d{2}:\d{2}\.\d{3})>)?', line)
-            
             start_timestamp = slected_line_timestamp['start_time']
             word = ""
 
             for part in parts:
-                print(f'part : {part}')
                 if not part:
                     continue  # Skip empty strings
 
@@ -120,9 +78,15 @@ def parse_vtt_file_to_words(file_path):
                 results.append((word, start_timestamp, slected_line_timestamp['end_time']))
     return results
 
-# Example Usage (replace 'your_file.vtt' with the actual path to your file):
-file_path = './input.ar.vtt'  #  <--- REPLACE THIS WITH YOUR FILE PATH
-word_list = parse_vtt_file_to_words(file_path)
+# Streamlit app
+st.title("VTT File Parser")
 
-for item in word_list:
-    print(item)
+uploaded_file = st.file_uploader("Upload a VTT file", type=["vtt"])
+
+if uploaded_file is not None:
+    file_content = uploaded_file.read().decode("utf-8")
+    word_list = parse_vtt_file_to_words(file_content)
+
+    st.write("Parsed Words and Timestamps:")
+    for item in word_list:
+        st.write(item)
