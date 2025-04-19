@@ -10,5 +10,8 @@ COPY . /app/
 # Install Streamlit and any other dependencies
 RUN pip install streamlit
 
+# Expose the port that Streamlit will run on
+EXPOSE 8501
+
 # Specify the command to run the Streamlit app when the container starts
 CMD ["streamlit", "run", "/app/vtt_parser.py", "--server.port=8501", "--server.address=0.0.0.0"]

@@ -4,5 +4,7 @@ services:
   vtt-parser:
     build: .      # Build from the current directory (where the Dockerfile is)
     volumes:
-      - .:/app  # Mount the current directory to /vtt-files in the container
-    command: ["python", "/app/vtt_parser.py"] # Override the CMD in the Dockerfile
+      - .:/app  # Mount the current directory to /app in the container
+    ports:
+      - "8501:8501"  # Expose port 8501
+    command: ["streamlit", "run", "/app/vtt_parser.py", "--server.port=8501", "--server.address=0.0.0.0"]
