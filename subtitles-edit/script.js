@@ -1,3 +1,6 @@
+let subtitles = [];
+let currentSubtitleIndex = 0;
+
 document.getElementById('load-video').addEventListener('click', () => {
   const videoUrl = document.getElementById('video-url').value;
 //  const videoId = extractYouTubeVideoId(videoUrl);
@@ -18,7 +21,7 @@ document.getElementById('subtitle-file').addEventListener('change', (event) => {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const subtitles = parseSRT(e.target.result);
+      subtitles = parseSRT(e.target.result);
       renderSubtitleEditor(subtitles);
     };
     reader.readAsText(file);
@@ -48,8 +51,8 @@ function parseSRT(srtContent) {
     } else if (line.includes('-->')) {
       // Time range (e.g., "00:00:01,000 --> 00:00:04,000")
       const [start, end] = line.split(' --> ');
-      currentSubtitle.start = start.trim();
-      currentSubtitle.end = end.trim();
+      currentSubtitle.start = parseTime(start.trim());
+      currentSubtitle.end = parseTime(end.trim());
     } else if (line === '') {
       // Empty line indicates the end of a subtitle block
       if (currentSubtitle) {
@@ -65,6 +68,17 @@ function parseSRT(srtContent) {
   }
 
   return subtitles;
+}
+
+function parseTime(timeString) {
+  const [hours, minutes, seconds] = timeString.split(':');
+  const [sec, ms] = seconds.split(',');
+  return (
+    parseInt(hours) * 3600 +
+    parseInt(minutes) * 60 +
+    parseInt(sec) +
+    parseInt(ms) / 1000
+  );
 }
 
 function renderSubtitleEditor(subtitles) {
@@ -94,8 +108,8 @@ function renderSubtitleEditor(subtitles) {
     const saveButton = document.createElement('button');
     saveButton.textContent = 'Save';
     saveButton.addEventListener('click', () => {
-      subtitle.start = startInput.value;
-      subtitle.end = endInput.value;
+      subtitle.start = parseFloat(startInput.value);
+      subtitle.end = parseFloat(endInput.value);
       subtitle.text = textInput.value;
       alert('Subtitle updated!');
     });
@@ -109,3 +123,41 @@ function renderSubtitleEditor(subtitles) {
     editor.appendChild(lineDiv);
   });
 }
+
+function updateSubtitleOverlay(currentTime) {
+  const overlay = document.getElementById('subtitle-overlay');
+  if (
+    currentSubtitleIndex < subtitles.length &&
+    currentTime >= subtitles[currentSubtitleIndex].start &&
+    currentTime <= subtitles[currentSubtitleIndex].end
+  ) {
+    overlay.textContent = subtitles[currentSubtitleIndex].text;
+  } else if (
+    currentSubtitleIndex < subtitles.length &&
+    currentTime > subtitles[currentSubtitleIndex].end
+  ) {
+    currentSubtitleIndex++;
+    overlay.textContent = '';
+  } else if (
+    currentSubtitleIndex > 0 &&
+    currentTime < subtitles[currentSubtitleIndex - 1].start
+  ) {
+    currentSubtitleIndex--;
+    overlay.textContent = '';
+  }
+}
+
+// Sync subtitles with the video
+setInterval(() => {
+  const iframe = document.getElementById('youtube-video');
+  const player = new YT.Player(iframe, {
+    events: {
+      onStateChange: (event) => {
+        if (event.data === YT.PlayerState.PLAYING) {
+          const currentTime = player.getCurrentTime();
+          updateSubtitleOverlay(currentTime);
+        }
+      },
+    },
+  });
+}, 500);
