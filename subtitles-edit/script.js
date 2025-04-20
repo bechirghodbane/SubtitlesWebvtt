@@ -1,6 +1,6 @@
 document.getElementById('load-video').addEventListener('click', () => {
   const videoUrl = document.getElementById('video-url').value;
-  //const videoId = extractYouTubeVideoId(videoUrl);
+//  const videoId = extractYouTubeVideoId(videoUrl);
   videoId = videoUrl;
   if (videoId) {
     const iframe = document.getElementById('youtube-video');
@@ -12,15 +12,18 @@ document.getElementById('load-video').addEventListener('click', () => {
 
 document.getElementById('subtitle-file').addEventListener('change', (event) => {
   const file = event.target.files[0];
-  if (file && file.type === 'text/vtt') {
+  console.log(file.type)
+  //if (file && file.type === 'text/plain') {
+  if (file) {
+
     const reader = new FileReader();
     reader.onload = (e) => {
-      const subtitles = parseWebVTT(e.target.result);
+      const subtitles = parseSRT(e.target.result);
       renderSubtitleEditor(subtitles);
     };
     reader.readAsText(file);
   } else {
-    alert('Please upload a valid WebVTT file.');
+    alert('Please upload a valid SRT file.');
   }
 });
 
@@ -30,24 +33,36 @@ function extractYouTubeVideoId(url) {
   return match ? match[1] || match[2] : null;
 }
 
-function parseWebVTT(vttContent) {
-  const lines = vttContent.split('\n');
+function parseSRT(srtContent) {
+  const lines = srtContent.split('\n');
   const subtitles = [];
   let currentSubtitle = null;
+  let lineIndex = 0;
 
-  lines.forEach((line) => {
-    if (line.includes('-->')) {
+  while (lineIndex < lines.length) {
+    const line = lines[lineIndex].trim();
+
+    if (line !== '' && !isNaN(line)) {
+      // Subtitle index (e.g., "1", "2", etc.)
+      currentSubtitle = { id:line , start: '', end: '', text: '' };
+    } else if (line.includes('-->')) {
+      // Time range (e.g., "00:00:01,000 --> 00:00:04,000")
       const [start, end] = line.split(' --> ');
-      currentSubtitle = { start: start.trim(), end: end.trim(), text: '' };
-    } else if (line.trim() === '') {
+      currentSubtitle.start = start.trim();
+      currentSubtitle.end = end.trim();
+    } else if (line === '') {
+      // Empty line indicates the end of a subtitle block
       if (currentSubtitle) {
         subtitles.push(currentSubtitle);
         currentSubtitle = null;
       }
     } else if (currentSubtitle) {
-      currentSubtitle.text += line.trim() + ' ';
+      // Subtitle text
+      currentSubtitle.text += line + ' ';
     }
-  });
+
+    lineIndex++;
+  }
 
   return subtitles;
 }
@@ -59,6 +74,10 @@ function renderSubtitleEditor(subtitles) {
   subtitles.forEach((subtitle, index) => {
     const lineDiv = document.createElement('div');
     lineDiv.className = 'subtitle-line';
+
+    const idInput = document.createElement('input');
+    idInput.type = 'text';
+    idInput.value = subtitle.id;
 
     const startInput = document.createElement('input');
     startInput.type = 'text';
@@ -81,6 +100,7 @@ function renderSubtitleEditor(subtitles) {
       alert('Subtitle updated!');
     });
 
+    lineDiv.appendChild(idInput);
     lineDiv.appendChild(startInput);
     lineDiv.appendChild(endInput);
     lineDiv.appendChild(textInput);
