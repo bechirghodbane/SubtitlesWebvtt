@@ -1,6 +1,7 @@
 document.getElementById('load-video').addEventListener('click', () => {
   const videoUrl = document.getElementById('video-url').value;
-  const videoId = extractYouTubeVideoId(videoUrl);
+  //const videoId = extractYouTubeVideoId(videoUrl);
+  videoId = videoUrl;
   if (videoId) {
     const iframe = document.getElementById('youtube-video');
     iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1`;
