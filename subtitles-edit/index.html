@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Video Subtitle Editor</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>YouTube Video Subtitle Editor</h1>
+    <div class="video-container">
+      <iframe id="youtube-video" width="640" height="360" frameborder="0" allowfullscreen></iframe>
+    </div>
+    <div class="controls">
+      <label for="video-url">YouTube Video URL:</label>
+      <input type="text" id="video-url" placeholder="Enter YouTube video URL">
+      <button id="load-video">Load Video</button>
+    </div>
+    <div class="subtitle-container">
+      <label for="subtitle-file">Upload WebVTT File:</label>
+      <input type="file" id="subtitle-file" accept=".vtt">
+      <div id="subtitle-editor"></div>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
+
