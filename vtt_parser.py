@@ -8,6 +8,15 @@ def time_to_seconds(time_str):
     hours, minutes, seconds = map(float, time_str.split(':'))
     return hours * 3600 * 1000 + minutes * 60 * 1000 + seconds * 1000 + milliseconds
 
+def seconds_to_srt_time(seconds):
+    """Converts milliseconds to SRT time format (HH:MM:SS,mmm)."""
+    milliseconds = int(seconds % 1000)
+    seconds = int(seconds // 1000)
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    seconds = seconds % 60
+    return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
+
 def filter_line_timestamps(parsed_line):
     if parsed_line is None:
         return None
@@ -78,6 +87,20 @@ def parse_vtt_file_to_words(file_content):
                 results.append((word, start_timestamp, slected_line_timestamp['end_time']))
     return results
 
+def write_srt_file(word_list, output_file):
+    """
+    Writes the word list to an SRT file.
+
+    Args:
+        word_list: A list of tuples containing words and their timestamps.
+        output_file: The name of the output SRT file.
+    """
+    with open(output_file, 'w') as f:
+        for i, (word, start_time, end_time) in enumerate(word_list, start=1):
+            f.write(f"{i}\n")
+            f.write(f"{seconds_to_srt_time(time_to_seconds(start_time))} --> {seconds_to_srt_time(time_to_seconds(end_time))}\n")
+            f.write(f"{word}\n\n")
+
 # Streamlit app
 st.title("VTT File Parser")
 
@@ -90,3 +113,9 @@ if uploaded_file is not None:
     st.write("Parsed Words and Timestamps:")
     for item in word_list:
         st.write(item)
+
+    # Save as SRT file
+    if st.button("Save as SRT"):
+        output_file = "output.srt"
+        write_srt_file(word_list, output_file)
+        st.success(f"SRT file saved as {output_file}")
