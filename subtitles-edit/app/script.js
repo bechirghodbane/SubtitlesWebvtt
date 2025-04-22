@@ -1,5 +1,48 @@
 let subtitles = [];
 let currentSubtitleIndex = 0;
+let player; // Declare the player globally
+
+// Load the YouTube Player API
+function onYouTubeIframeAPIReady() {
+  const iframe = document.getElementById('youtube-video');
+  player = new YT.Player(iframe, {
+    events: {
+      onReady: onPlayerReady, // Ensure the player is ready
+      onStateChange: onPlayerStateChange,
+    },
+  });
+}
+
+function onPlayerReady(event) {
+  console.log('Player is ready'); // Debugging: Confirm the player is ready
+}
+
+// Handle player state changes
+function onPlayerStateChange(event) {
+  console.log('Player state changed:', event.data); // Log the state change for debugging
+
+  if (event.data === YT.PlayerState.PLAYING) {
+    console.log('Video is playing');
+    // Sync subtitles with the video
+    const intervalId = setInterval(() => {
+      if (player && typeof player.getCurrentTime === 'function') {
+        const currentTime = player.getCurrentTime();
+        console.log('Current time:', currentTime); // Debugging: Log the current time
+        updateSubtitleOverlay(currentTime);
+      } else {
+        const type = typeof player.getCurrentTime;
+        console.warn('Player is not ready yet or getCurrentTime is not a function:', type);
+        clearInterval(intervalId); // Stop the interval if the player is not ready
+      }
+    }, 100);
+  } else if (event.data === YT.PlayerState.PAUSED) {
+    console.log('Video is paused');
+    // Optionally, clear the interval if needed
+  } else if (event.data === YT.PlayerState.ENDED) {
+    console.log('Video has ended');
+    // Handle video end state if needed
+  }
+}
 
 document.getElementById('load-video').addEventListener('click', () => {
   const videoUrl = document.getElementById('video-url').value;
@@ -11,6 +54,11 @@ document.getElementById('load-video').addEventListener('click', () => {
   } else {
     alert('Invalid YouTube URL');
   }
+
+  // Load the YouTube Player API
+  setTimeout(() => {
+    onYouTubeIframeAPIReady();
+  }, 2000);
 });
 
 document.getElementById('subtitle-file').addEventListener('change', (event) => {
@@ -41,6 +89,8 @@ function parseSRT(srtContent) {
   const subtitles = [];
   let currentSubtitle = null;
   let lineIndex = 0;
+  let minTime = Infinity;
+  let maxTime = -Infinity;
 
   while (lineIndex < lines.length) {
     const line = lines[lineIndex].trim();
@@ -57,6 +107,10 @@ function parseSRT(srtContent) {
       // Empty line indicates the end of a subtitle block
       if (currentSubtitle) {
         subtitles.push(currentSubtitle);
+        console.log('Subtitle:', currentSubtitle.id, 'Start:', currentSubtitle.start, 'End:', currentSubtitle.end, 'Text:', currentSubtitle.text);
+        minTime = Math.min(minTime, currentSubtitle.end - currentSubtitle.start);
+        maxTime = Math.max(maxTime, currentSubtitle.end - currentSubtitle.start);
+        console.log('Subtitle:', currentSubtitle.id, 'Min:', minTime, 'Max:', maxTime, 'Text:', currentSubtitle.text);
         currentSubtitle = null;
       }
     } else if (currentSubtitle) {
@@ -66,7 +120,9 @@ function parseSRT(srtContent) {
 
     lineIndex++;
   }
-
+  console.log('Min time:', minTime);
+  console.log('Max time:', maxTime);
+  
   return subtitles;
 }
 
@@ -147,17 +203,15 @@ function updateSubtitleOverlay(currentTime) {
   }
 }
 
-// Sync subtitles with the video
-setInterval(() => {
-  const iframe = document.getElementById('youtube-video');
-  const player = new YT.Player(iframe, {
-    events: {
-      onStateChange: (event) => {
-        if (event.data === YT.PlayerState.PLAYING) {
-          const currentTime = player.getCurrentTime();
-          updateSubtitleOverlay(currentTime);
-        }
-      },
-    },
+
+function findMinTime(subtitles, start, end) {
+  let minTime = Infinity;
+
+  subtitles.forEach((subtitle) => {
+    if (subtitle.start >= start && subtitle.end <= end) {
+      minTime = Math.min(minTime, subtitle.start);
+    }
   });
-}, 500);
+
+  return minTime === Infinity ? null : minTime; // Return null if no valid time is found
+}
