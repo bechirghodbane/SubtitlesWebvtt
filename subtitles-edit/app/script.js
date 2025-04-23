@@ -70,6 +70,8 @@ document.getElementById('subtitle-file').addEventListener('change', (event) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       subtitles = parseSRT(e.target.result);
+      console.log(measureMinMaxTime(subtitles));
+      
       renderSubtitleEditor(subtitles);
     };
     reader.readAsText(file);
@@ -85,45 +87,44 @@ function extractYouTubeVideoId(url) {
 }
 
 function parseSRT(srtContent) {
-  const lines = srtContent.split('\n');
+  const blocks = srtContent.split('\n\n');
   const subtitles = [];
-  let currentSubtitle = null;
-  let lineIndex = 0;
+
+  blocks.forEach((block) => {
+    const lines = block.split('\n');
+    if (lines.length >= 3) {
+      const id = lines[0].trim();
+      const [start, end] = lines[1].split(' --> ').map((time) => parseTime(time.trim()));
+      const text = lines.slice(2).join(' ').trim();
+
+      subtitles.push({
+        id,
+        start,
+        end,
+        text,
+      });
+    }
+  });
+
+  return subtitles;
+}
+
+// Function mesure min and max time of subtitles
+function measureMinMaxTime(subtitles) {
   let minTime = Infinity;
   let maxTime = -Infinity;
 
-  while (lineIndex < lines.length) {
-    const line = lines[lineIndex].trim();
-
-    if (line !== '' && !isNaN(line)) {
-      // Subtitle index (e.g., "1", "2", etc.)
-      currentSubtitle = { id:line , start: '', end: '', text: '' };
-    } else if (line.includes('-->')) {
-      // Time range (e.g., "00:00:01,000 --> 00:00:04,000")
-      const [start, end] = line.split(' --> ');
-      currentSubtitle.start = parseTime(start.trim());
-      currentSubtitle.end = parseTime(end.trim());
-    } else if (line === '') {
-      // Empty line indicates the end of a subtitle block
-      if (currentSubtitle) {
-        subtitles.push(currentSubtitle);
-        console.log('Subtitle:', currentSubtitle.id, 'Start:', currentSubtitle.start, 'End:', currentSubtitle.end, 'Text:', currentSubtitle.text);
-        minTime = Math.min(minTime, currentSubtitle.end - currentSubtitle.start);
-        maxTime = Math.max(maxTime, currentSubtitle.end - currentSubtitle.start);
-        console.log('Subtitle:', currentSubtitle.id, 'Min:', minTime, 'Max:', maxTime, 'Text:', currentSubtitle.text);
-        currentSubtitle = null;
-      }
-    } else if (currentSubtitle) {
-      // Subtitle text
-      currentSubtitle.text += line + ' ';
+  subtitles.forEach((subtitle) => {
+    let time = subtitle.end - subtitle.start;
+    if (time < minTime) {
+      minTime = time;
     }
+    if (time > maxTime) {
+      maxTime = time;
+    }
+  });
 
-    lineIndex++;
-  }
-  console.log('Min time:', minTime);
-  console.log('Max time:', maxTime);
-  
-  return subtitles;
+  return { minTime, maxTime };
 }
 
 function parseTime(timeString) {
